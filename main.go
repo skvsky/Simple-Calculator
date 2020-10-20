@@ -1,8 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
+	"strconv"
+	"strings"
 	"time"
+	"unicode"
 )
 
 type Clock struct {
@@ -15,10 +20,50 @@ type Clock struct {
 	day    int
 }
 
-func NewClock() *Clock {
+func parseTimeStr(cl *Clock, input string) error {
+
+	f := func(c rune) bool {
+		return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+	}
+
+	cldata := strings.FieldsFunc(input, f)
+
+	if len(cldata) == 3 {
+		hr, err := strconv.Atoi(cldata[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		cl.hour = hr
+		min, err := strconv.Atoi(cldata[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		cl.min = min
+		sec, err := strconv.Atoi(cldata[2])
+		if err != nil {
+			log.Fatal(err)
+		}
+		cl.sec = sec
+	}
+
+	return nil
+}
+
+func NewClock(input string) (*Clock, error) {
+
+	cl := Clock{}
+
+	if len(input) > 0 {
+		err := parseTimeStr(&cl, input)
+		if err != nil {
+			log.Fatal(err)
+			return &cl, err
+		}
+		return &cl, nil
+	}
 
 	nowTime := time.Now()
-	cl := Clock{}
+
 	cl.hour = nowTime.Hour()
 	cl.min = nowTime.Minute()
 	cl.sec = nowTime.Second()
@@ -27,7 +72,7 @@ func NewClock() *Clock {
 	cl.month = nowTime.Month()
 	cl.day = nowTime.Day()
 
-	return &cl
+	return &cl, nil
 }
 
 func (cl *Clock) displayMsg() {
@@ -80,7 +125,14 @@ func (cl *Clock) PrintMsg(msg string) {
 
 func main() {
 
-	cl := NewClock()
+	var nFlag string
+	flag.StringVar(&nFlag, "inputTime", "09:00:00", "Input time")
+	flag.Parse()
+
+	cl, err := NewClock(nFlag)
+	if err != nil {
+		return
+	}
 	exitChan := make(chan struct{})
 	exitGoChan := make(chan bool)
 	RegisterClock(cl, exitGoChan, exitChan)
